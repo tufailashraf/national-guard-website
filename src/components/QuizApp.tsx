@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PenLine, Calendar, Target, BarChart2 } from 'lucide-react';
 
 interface Question {
   id: number;
@@ -7,11 +8,19 @@ interface Question {
   correctAnswer: string;
 }
 
+interface Student {
+  name: string;
+  examDate: string;
+  score: number;
+}
+
 const QuizApp: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes in seconds
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
+  const [showResults, setShowResults] = useState(false);
+  const [examResults, setExamResults] = useState<Student[]>([]);
 
   // Sample questions
   const questions: Question[] = [
@@ -53,13 +62,13 @@ const QuizApp: React.FC = () => {
 
   // Timer logic
   useEffect(() => {
-    if (timeLeft > 0) {
+    if (timeLeft > 0 && !showResults) {
       const timer = setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [timeLeft]);
+  }, [timeLeft, showResults]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -88,15 +97,132 @@ const QuizApp: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    // Here you would typically send the answers to a server
-    console.log('Submitted answers:', answers);
-    // You can also calculate the score here
-    const score = Object.entries(answers).reduce((acc, [questionIndex, answer]) => {
+    // Calculate the score
+    const totalQuestions = questions.length;
+    const correctAnswers = Object.entries(answers).reduce((acc, [questionIndex, answer]) => {
       const question = questions[parseInt(questionIndex)];
       return acc + (answer === question.correctAnswer ? 1 : 0);
     }, 0);
-    console.log('Score:', score);
+    
+    const score = Math.round((correctAnswers / totalQuestions) * 100);
+    
+    // Create mock results
+    const currentDate = new Date().toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+
+    const newResults: Student[] = [
+      { name: "John Doe", examDate: currentDate, score: 85 },
+      { name: "Jane Smith", examDate: currentDate, score: 72 },
+      { name: "Mike Johnson", examDate: currentDate, score: 45 },
+      { name: "Current User", examDate: currentDate, score: score }
+    ];
+
+    setExamResults(newResults);
+    setShowResults(true);
   };
+
+  const handleStartNewExam = () => {
+    setShowResults(false);
+    setCurrentQuestion(0);
+    setTimeLeft(1800);
+    setSelectedAnswer(null);
+    setAnswers({});
+  };
+
+  if (showResults) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8 flex items-center gap-2">
+            <PenLine className="w-8 h-8 text-red-500" />
+            <h1 className="text-3xl font-bold">Exam Results</h1>
+          </div>
+
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr className="bg-white">
+                  <th className="px-6 py-4 text-left">
+                    <div className="flex items-center gap-2">
+                      <PenLine className="w-5 h-5 text-blue-500" />
+                      <span>Student Name</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-blue-500" />
+                      <span>Exam Date</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-5 h-5 text-blue-500" />
+                      <span>Score</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left">
+                    <div className="flex items-center gap-2">
+                      <BarChart2 className="w-5 h-5 text-blue-500" />
+                      <span>Pass/Fail</span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {examResults.map((student, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-lg">
+                      {student.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-lg">
+                      {student.examDate}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-lg">
+                      {student.score}%
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {student.score >= 50 ? (
+                        <div className="flex items-center gap-1">
+                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-green-100">
+                            <span className="text-green-600 text-xl">✓</span>
+                          </span>
+                          <span className="text-lg">Pass</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-red-100">
+                            <span className="text-red-600 text-xl">✕</span>
+                          </span>
+                          <span className="text-lg">Fail</span>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-8 flex gap-4">
+            <button 
+              onClick={handleStartNewExam}
+              className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors text-lg font-medium"
+            >
+              Start New Exam
+            </button>
+            <button 
+              className="flex-1 bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition-colors text-lg font-medium"
+            >
+              View Detailed Report
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
@@ -171,10 +297,10 @@ const QuizApp: React.FC = () => {
           </button>
           
           <button
-            onClick={() => handleSubmit()}
+            onClick={handleSubmit}
             className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
           >
-            Submit Answer
+            Submit Exam
           </button>
 
           <button
